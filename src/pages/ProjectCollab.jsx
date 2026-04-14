@@ -1,4 +1,3 @@
-// src/pages/ProjectCollab.jsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { io } from 'socket.io-client';
@@ -10,7 +9,10 @@ import { toast } from 'react-toastify';
 import { FaArrowLeft, FaTrash } from 'react-icons/fa';
 import { jwtDecode } from 'jwt-decode';
 
-const SOCKET_URL = '/';
+// FIX: Point to your actual Render backend, not '/'
+const BACKEND_URL = window.location.hostname === "localhost" 
+  ? "http://localhost:5000" 
+  : "https://suretrustg29fsd-backend-qgln.onrender.com";
 
 const readUser = () => {
   try {
@@ -65,9 +67,15 @@ const ProjectCollab = () => {
         fetchData();
 
         if (!socketRef.current) {
-            socketRef.current = io(SOCKET_URL, { withCredentials: true, path: '/socket.io' });
+            // FIX: Use BACKEND_URL and add polling transport for Render free tier reliability
+            socketRef.current = io(BACKEND_URL, { 
+                withCredentials: true, 
+                transports: ["polling", "websocket"],
+                reconnection: true
+            });
 
             socketRef.current.on('connect', () => {
+                console.log("✅ Collaboration Socket Connected");
                 socketRef.current.emit('joinProject', { projectId });
             });
 
@@ -86,7 +94,10 @@ const ProjectCollab = () => {
             socketRef.current.on('messageCreated', (message) => {
                 setMessages((prevMessages) => [...prevMessages, message]);
             });
-
+            
+            socketRef.current.on('connect_error', (err) => {
+                console.warn("Socket Connection Error:", err.message);
+            });
         }
         
         return () => {
@@ -143,9 +154,7 @@ const ProjectCollab = () => {
         formData.append('project', projectId);
 
         try {
-            // Service already handles multipart form data
             await uploadDeliverable(formData);
-            // We don't need to manually add to state, socket event will handle it
             setFile(null);
             document.getElementById('file-input').value = '';
             toast.success('Deliverable uploaded!');
@@ -169,7 +178,6 @@ const ProjectCollab = () => {
         if (window.confirm('Are you sure you want to delete this file? This cannot be undone.')) {
             try {
                 await deleteDeliverable(deliverableId);
-                // We don't need to manually remove from state, socket event will handle it
                 toast.success('Deliverable deleted!');
             } catch (error) {
                 toast.error(error.response?.data?.error || 'Failed to delete deliverable.');
@@ -255,8 +263,8 @@ const ProjectCollab = () => {
                     <h2 className="text-xl font-semibold mb-4 text-gray-700">Chat</h2>
                     <div className="border h-80 overflow-y-auto mb-4 p-2 bg-gray-50 rounded-md flex-1 flex flex-col gap-2">
                         {messages.map((msg) => (
-                            <div key={msg._id} className={`flex ${msg.sender?._id === user.id ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`rounded-lg px-3 py-2 max-w-xs ${msg.sender?._id === user.id ? 'bg-indigo-500 text-white' : 'bg-gray-200 text-black'}`}>
+                            <div key={msg._id} className={`flex ${msg.sender?._id === user?.id || msg.sender === user?.id ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`rounded-lg px-3 py-2 max-w-xs ${msg.sender?._id === user?.id || msg.sender === user?.id ? 'bg-indigo-500 text-white' : 'bg-gray-200 text-black'}`}>
                                     <p className="font-bold text-sm">{msg.sender?.name || 'User'}</p>
                                     <p>{msg.content}</p>
                                 </div>
@@ -302,13 +310,12 @@ const ProjectCollab = () => {
                         {deliverables.map((d) => (
                              <div key={d._id} className="relative p-2 bg-gray-50 rounded-md group">
                                 <img
-                                    /* MODIFIED: Use the direct Cloudinary URL */
                                     src={d.fileUrl}
                                     alt="deliverable"
                                     className="w-full h-24 object-cover rounded-md cursor-pointer"
                                     onClick={() => setSelectedImage(d.fileUrl)}
                                 />
-                                {user.id === d.uploadedBy?._id && (
+                                {user?.id === d.uploadedBy?._id && (
                                     <button 
                                         onClick={() => handleDeleteDeliverable(d._id)}
                                         className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
