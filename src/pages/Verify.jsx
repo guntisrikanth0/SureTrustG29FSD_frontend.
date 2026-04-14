@@ -24,7 +24,7 @@ const Verify = () => {
     setIsLoading(true);
     try {
 
-      const { data } = await apiClient.post('http://https://suretrustg29fsd-backend-qgln.onrender.com/api/auth/verify', { email, otp });
+      const { data } = await apiClient.post('https://suretrustg29fsd-backend-qgln.onrender.com/api/auth/verify', { email, otp });
 
       localStorage.setItem('token', data.token);
 

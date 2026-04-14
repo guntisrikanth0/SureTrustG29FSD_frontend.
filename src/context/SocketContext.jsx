@@ -16,21 +16,36 @@ export const SocketProvider = ({ children }) => {
       ? "http://localhost:5000" 
       : "https://suretrustg29fsd-backend-qgln.onrender.com";
 
-    // 2. Pass the URL to the io() function
+    // 2. Initialize socket connection
     const newSocket = io(SOCKET_URL, {
       auth: {
         token: localStorage.getItem('token')
       },
-      // Adding these options helps prevent connection issues on Render
-      transports: ["websocket", "polling"],
-      withCredentials: true
+      // IMPORTANT: Polling first, then WebSocket. 
+      // This prevents the 404 error during Render's cold start.
+      transports: ["polling", "websocket"],
+      withCredentials: true,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 2000,
+    });
+
+    // Debugging logs
+    newSocket.on("connect", () => {
+      console.log("✅ Socket Connected to:", SOCKET_URL);
+    });
+
+    newSocket.on("connect_error", (error) => {
+      console.warn("⚠️ Socket connection error (retrying...):", error.message);
     });
 
     setSocket(newSocket);
 
     // Cleanup on unmount
     return () => {
-        if (newSocket) newSocket.close();
+        if (newSocket) {
+          newSocket.disconnect();
+        }
     };
   }, []);
 
