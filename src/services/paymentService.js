@@ -1,6 +1,5 @@
-// src/services/paymentService.js
+// src/services/paymentServ
 import api from './api';
-
 // Corresponds to POST /api/payment/create-account
 export const createBankAccount = (details) => {
     return api.post('/payment/create-account', details);
