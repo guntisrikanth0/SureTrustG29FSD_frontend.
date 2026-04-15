@@ -5,7 +5,7 @@ import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import axios from 'axios';
 
 const apiClient = axios.create({
-  baseURL: '/api/auth',
+  baseURL: 'https://suretrustg29fsd-backend-qgln.onrender.com/api/auth',
 });
 
 const Login = () => {
